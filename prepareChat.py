@@ -2,6 +2,18 @@ import json
 import sys
 import os
 
+# Define filtering dictionaries
+dict_id = {
+    # "user1965673897": True
+}
+
+dict_content = {
+    # "小支星": True,
+    # "小只星": True,
+    # "小嘟星": True,
+    # "支宝": True
+}
+
 def filter_and_format_messages(chat_data):
     filtered_messages = []
     
@@ -22,21 +34,33 @@ def filter_and_format_messages(chat_data):
                 continue
 
             sender = message["from"]
+            sender_id = message["from_id"]
             text_content = "".join(entity.get("text", "") for entity in message["text_entities"] if entity.get("type") == "plain")
-            
-            if text_content.strip():
-                filtered_messages.append(f"{{{sender}}}{text_content}")
+
+            # Skip empty messages
+            if not text_content.strip():
+                continue
+
+            # Filtering logic
+            match_id = bool(dict_id) and sender_id in dict_id
+            match_content = bool(dict_content) and any(keyword in text_content for keyword in dict_content)
+
+            if dict_id or dict_content:  # Apply filters only if at least one dictionary is non-empty
+                if not (match_id or match_content):
+                    continue  # Skip messages that do not match any filter
+
+            filtered_messages.append(f"{{{sender}}}{text_content}")
 
     return filtered_messages
 
 def main():
     if len(sys.argv) < 3:
-        print("Usage: python prepareChat.py <ChatHistory.json> <output.txt> [replace]")
+        print("Usage: python prepareChat.py <ChatHistory.json> <output.txt> [--replace]")
         sys.exit(1)
 
     input_file = sys.argv[1]
     output_file = sys.argv[2]
-    replace = len(sys.argv) > 3 and sys.argv[3].lower() == "replace"
+    replace = "--replace" in sys.argv  # Check for the new --replace argument
 
     try:
         with open(input_file, "r", encoding="utf-8") as f:
